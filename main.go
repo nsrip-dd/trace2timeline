@@ -3,9 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"os"
-	"runtime/pprof"
+	"runtime"
 	"runtime/trace"
 	"sort"
 	"sync"
@@ -27,8 +26,7 @@ type StackFrame struct {
 func main() {
 	// start this so that we get CPU samples added to the trace
 	// (requires Go >= 1.19)
-	pprof.StartCPUProfile(io.Discard)
-	defer pprof.StopCPUProfile()
+	runtime.SetCPUProfileRate(100)
 
 	buf := new(bytes.Buffer)
 	if err := trace.Start(buf); err != nil {
