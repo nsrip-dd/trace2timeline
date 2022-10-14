@@ -98,7 +98,8 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 	// BUILDING PPROF-ENCODED PROFILE
 
 	buf := new(bytes.Buffer)
-	strtab := make(StrTab)
+	strtab := StrTab{ids: make(map[string]int64)}
+
 	ps := molecule.NewProtoStream(buf)
 
 	// Value type, 1
@@ -155,11 +156,11 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 	for _, stk := range parsed.Stacks {
 		for _, frame := range stk {
 			concat := frame.Fn + frame.File
-			id, ok := functions[concat]
+			_, ok := functions[concat]
 			if ok {
 				continue
 			}
-			id = uint64(len(functions) + 1)
+			id := uint64(len(functions) + 1)
 			functions[concat] = id
 			ps.Embedded(5, func(ps *molecule.ProtoStream) error {
 				ps.Uint64(1, id)                    // unique ID
@@ -225,7 +226,7 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 		b = append(b, s...)
 	}
 	writeString("")
-	for s := range strtab {
+	for _, s := range strtab.table {
 		writeString(s)
 	}
 
@@ -235,13 +236,17 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 }
 
 // StrTab deduplicates strings, gives them unique IDs
-type StrTab map[string]int64
+type StrTab struct {
+	ids   map[string]int64
+	table []string
+}
 
-func (t StrTab) Get(s string) int64 {
-	id, ok := t[s]
+func (t *StrTab) Get(s string) int64 {
+	id, ok := t.ids[s]
 	if !ok {
-		id = int64(len(t))
-		t[s] = id
+		id = int64(len(t.table))
+		t.ids[s] = id
+		t.table = append(t.table, s)
 	}
 	return id
 }
