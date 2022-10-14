@@ -244,7 +244,7 @@ type StrTab struct {
 func (t *StrTab) Get(s string) int64 {
 	id, ok := t.ids[s]
 	if !ok {
-		id = int64(len(t.table))
+		id = int64(len(t.table) + 1)
 		t.ids[s] = id
 		t.table = append(t.table, s)
 	}
