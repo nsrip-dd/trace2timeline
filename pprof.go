@@ -46,8 +46,6 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 	// labelSetIDs associates the same set of labels
 	// (just concatenating all the strings) with the ID of that label set
 	labelSetIDs := make(map[string]*LabelSet)
-	// labelSets is the actual label sets
-	var labelSets []*LabelSet
 	for _, event := range parsed.Events {
 		switch event.Type {
 		case EvCPUSample:
@@ -76,17 +74,16 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 			set, ok := labelSetIDs[s]
 			if !ok {
 				set = &LabelSet{
-					ID:     int64(len(labelSets)),
+					ID:     int64(len(labelSetIDs)) + 1,
 					Labels: labels,
 				}
 				labelSetIDs[s] = set
-				labelSets = append(labelSets, set)
 			}
 			bd.LabelSets = append(bd.LabelSets, set.ID)
 		}
 	}
-	for i, set := range labelSets {
-		fmt.Printf("label set %d: %s\n", i, set.Labels)
+	for _, set := range labelSetIDs {
+		fmt.Printf("label set %d: %s\n", set.ID, set.Labels)
 	}
 	for id, pp := range info {
 		fmt.Printf("stack %d observed: value %d, breakdown %+v\n", id, pp.Value, pp.Breakdown)
@@ -110,7 +107,7 @@ func ToPprof(parsed ParseResult, start, stop time.Time, out io.Writer) error {
 	})
 
 	// LabelSet, 16
-	for _, set := range labelSets {
+	for _, set := range labelSetIDs {
 		ps.Embedded(16, func(ps *molecule.ProtoStream) error {
 			ps.Uint64(1, uint64(set.ID)) // id
 			for i := 0; i < len(set.Labels); i += 2 {
